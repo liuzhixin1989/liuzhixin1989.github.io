@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="./js/Sky.js"></script>
+    <script src="./js/Land.js"></script>
+    <script src="./js/Pipe.js"></script>
+    <script src="./js/Bird.js"></script>
+    <style>
+        #canvas {
+            border:1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas width="800" height="600" id="canvas"></canvas>
+</body>
+</html>
+<script>
+    //1、创建舞台
+    var canvas=document.getElementById("canvas");
+    var  ctx=canvas.getContext("2d");
+
+    //2、加载图片
+    var imagesName=["sky","land","pipe2","pipe1","birds"];
+
+    //创建一个对象保存图片
+    var imagesObj={};
+
+    var startTime;
+
+    //计数器
+    var count=0;
+    imagesName.forEach(function(imageName){
+        var image=new Image();
+        image.src="img/"+imageName+".png";
+        imagesObj[imageName]=image;
+
+        image.onload=function(){
+            count+=1;
+            if(count==imagesName.length){
+                //表示所有的图片都加载完成了
+                console.log("图片加载完成");
+                //创建角色
+                createRoles();
+            }
+        }
+    })
+
+    //创建一个数组存储所有的角色
+    var rolesArr=[];
+
+    //创建角色方法
+    function createRoles(){
+
+        //1、创建sky
+        for(var i=0;i<2;i++){
+            var sky=new Sky({
+                x:i*canvas.width,
+                image:imagesObj["sky"],
+                canvas:canvas,
+                ctx:ctx
+            })
+            //添加到角色组
+            rolesArr.push(sky);
+        }
+
+        //2、创建land
+        for(var i=0;i<5;i++){
+            var land=new Land({
+                x:i*canvas.width/4,
+                y:canvas.height-imagesObj["land"].height,
+                ctx:ctx,
+                canvas:canvas,
+                image:imagesObj["land"]
+            })
+            //把land添加到角色组中
+            rolesArr.push(land);
+
+        }
+
+        //3、绘制6个管道
+        //管道宽度
+        var pipeWidth=imagesObj["pipe1"].width;
+        var gap=(canvas.width-pipeWidth*6)/5;
+        for(var i=0;i<6;i++){
+            var pipe=new Pipe({
+                x:300+(pipeWidth+gap)*i,
+                y:imagesObj["land"].height,
+                canvas:canvas,
+                ctx:ctx,
+                topImage:imagesObj["pipe2"],
+                bottomImage:imagesObj["pipe1"],
+                gap:gap
+            })
+            rolesArr.push(pipe);
+        }
+
+        //4、绘制小鸟
+        var bird=new Bird({
+            x:100,
+            y:100,
+            ctx:ctx,
+            image:imagesObj["birds"]
+        });
+
+        rolesArr.push(bird);
+
+        //开始时间
+        startTime=new Date();
+        action();
+
+
+
+        //当点击时，给小鸟一个向上的速度
+        canvas.addEventListener("click", function () {
+            bird.speed = -0.2;
+        });
+    }
+
+    //开始行动
+    function action(){
+        //1、清空画布
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.beginPath();
+        rolesArr.forEach(function(role){
+            role.draw();
+        })
+
+        //绘制统计时间文字
+        var currentTime=new Date();
+
+        //的到运行时间的秒数
+        var totalTime=Math.floor((currentTime-startTime)/1000);
+        //的到小时数
+        var h=Math.floor(totalTime/3600);
+        //得到分钟数
+        var m=Math.floor(totalTime/60)%60;
+        //得到秒数
+        var s=totalTime%60;
+
+        //要绘制的文字
+        var text="你是能坚持"+h+"小时"+m+"分钟"+s+"秒的男人";
+
+        ctx.save();
+        ctx.font="30px 楷书";
+        ctx.fillStyle="yellow";
+        ctx.textBaseline="top";
+
+        //计算出文字的宽度
+        var textInfo=ctx.measureText(text);
+        var textWidth=textInfo.width;
+
+        //绘制文字
+        ctx.fillText(text,canvas.width-10-textWidth,10);
+
+        ctx.restore();
+        //判断小鸟是否死亡
+        //1.找到小鸟
+        var bird=rolesArr[rolesArr.length-1];
+        //判断Y轴坐标上
+        if(bird.y>=canvas.height-imagesObj["land"].height-imagesObj["birds"].height){
+            ctx.save();
+            ctx.fillStyle="red";
+            ctx.font="30px 楷体";
+            ctx.fillText("你的小鸟被摔死了",300,200);
+            ctx.restore();
+            return;
+        }
+        if(bird.y<=-20){
+            ctx.save();
+            ctx.fillStyle="red";
+            ctx.font="30px 楷体";
+            ctx.fillText("你的小鸟上天了",300,200);
+            ctx.restore();
+            return;
+        }
+        //判断是否撞到水管
+        if(ctx.isPointInPath(bird.x+imagesObj["birds"].width/3/2,bird.y+imagesObj["birds"].height/2)){
+            ctx.save();
+            ctx.fillStyle="red";
+            ctx.font="30px 楷体";
+            ctx.fillText(text,300,200);
+            ctx.restore();
+            return;
+
+        }
+        window.requestAnimationFrame(action);
+    }
+</script>
